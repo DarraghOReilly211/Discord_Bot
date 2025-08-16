@@ -1,29 +1,34 @@
-// Import the discord.js library
-const { Client, GatewayIntentBits } = require('discord.js');
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+const { Client, IntentsBitField} = require('discord.js');
 
-// Create a new client instance
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        IntentsBitField.Flags.Guilds,
+        IntentsBitField.Flags.GuildMembers,
+        IntentsBitField.Flags.GuildMessages,
+        IntentsBitField.Flags.MessageContent
     ]
 });
 
 // When the bot is ready
-client.once('ready', () => {
-    console.log(`✅ Logged in as ${client.user.tag}!`);
+client.once('ready', (c) => {
+    console.log(`✅ Logged in as ${c.user.tag}!`);
 });
 
-// Simple message command
-client.on('messageCreate', (message) => {
-    // Ignore messages from bots
-    if (message.author.bot) return;
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
 
-    if (message.content === '!ping') {
-        message.reply('Pong! 🏓');
+    const { commandName } = interaction;
+
+    // Handle commands here
+    if (commandName === 'ping') {
+        await interaction.reply('Pong!');
+    } else if (commandName === 'hello') {
+        await interaction.reply('Hello!');
+    } else {
+        await interaction.reply(`Unknown command: ${commandName}`);
     }
 });
 
 // Log in to Discord
-client.login('YOUR_BOT_TOKEN_HERE');
+client.login(process.env.TOKEN);
