@@ -6,8 +6,8 @@ const commands = [
         name: 'add',
         description: 'Add two numbers',
         options: [
-            {name: 'first-number', description: 'The first number', type: ApplicationCommandOptionType.Number, required: true},
-            {name: 'second-number', description: 'The second number', type: ApplicationCommandOptionType.Number, required: true}
+            {name: 'first-number', description: 'The first number', type: ApplicationCommandOptionType.Number, required: true, choices: [{name: 'One', value: 1}, {name: 'Two', value: 2}, {name: 'Three', value: 3}]},
+            {name: 'second-number', description: 'The second number', type: ApplicationCommandOptionType.Number, required: true, choices: [{name: 'One', value: 1}, {name: 'Two', value: 2}, {name: 'Three', value: 3}]}
         ]
     },
 ];
