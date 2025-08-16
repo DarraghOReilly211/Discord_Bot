@@ -21,10 +21,11 @@ client.on("interactionCreate", async (interaction) => {
     const { commandName } = interaction;
 
     // Handle commands here
-    if (commandName === 'ping') {
-        await interaction.reply('Pong!');
-    } else if (commandName === 'hello') {
-        await interaction.reply('Hello!');
+    if (commandName === 'add') {
+        const num1 = interaction.options.getNumber('first-number');
+        const num2 = interaction.options.getNumber('second-number');
+        const sum = num1 + num2;
+        await interaction.reply(`The sum is: ${sum}`);
     } else {
         await interaction.reply(`Unknown command: ${commandName}`);
     }
