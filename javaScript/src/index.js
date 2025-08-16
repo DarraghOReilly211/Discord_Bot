@@ -25,6 +25,8 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.reply('Pong!');
     } else if (commandName === 'hello') {
         await interaction.reply('Hello!');
+    } else  if (commandName === 'beep') {
+        await interaction.reply('Boop!');
     } else {
         await interaction.reply(`Unknown command: ${commandName}`);
     }
