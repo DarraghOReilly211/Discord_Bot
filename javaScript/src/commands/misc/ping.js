@@ -1,11 +1,13 @@
-module.exports = {
-  name: "ping",
-  description: "Pong!",
-  // devOnly: Boolean,
-  // testOnly: Boolean,
-  // deleted: Boolean,
+const { SlashCommandBuilder } = require('discord.js');
 
-  callback: (client, interaction) => {
-    interaction.reply("Pong!");
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('Replies with Pong'),
+
+  async execute(interaction) {
+    const user = interaction.user;
+    await interaction.channel.send('${user.username} sent ping 🏓');
+    await interaction.channel.send('🏓 Pong!');
   },
 };
