@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@azure/msal-node": "^3.7.2",
     "better-sqlite3": "^12.2.0",
     "colornames": "^1.1.1",
     "dayjs": "^1.11.13",

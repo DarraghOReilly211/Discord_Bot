@@ -9,16 +9,20 @@ const {
   EmbedBuilder,
   PermissionsBitField,
   Partials,
-  ActivityType
 } = require('discord.js');
 
 const fs = require('fs');
 const path = require('path');
-const { emojiToRole, emojiLabels, ROLE_EMBED_TAG } = require('./utils/claimRole');
 
-// ---------------------------------------------
-// Client setup (note added reactions intent + partials)
-// ---------------------------------------------
+const { emojiToRole, emojiLabels, ROLE_EMBED_TAG } = require('./utils/claimRole');
+const { updateStatus } = require('./utils/getStatus');
+
+// FIXED: path to your authServer (based on your tree)
+const { startAuthServer } = require('./commands/calander/authServer');
+
+// ----------------------------
+// Client
+// ----------------------------
 const client = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
@@ -27,16 +31,19 @@ const client = new Client({
     IntentsBitField.Flags.MessageContent,
     IntentsBitField.Flags.GuildMessageReactions,
   ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction], // handle uncached reactions
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
 client.commands = new Collection();
 const commands = [];
 
-// ---------------------------------------------
-// Load commands from ./commands (unchanged)
-// ---------------------------------------------
-const commandsPath = path.join(__dirname, 'commands');
+// ----------------------------
+// Command loader
+// ----------------------------
+const commandRoots = [
+  path.join(__dirname, 'commands'),
+  path.join(__dirname, 'utils'),
+];
 
 function loadCommands(dir) {
   if (!fs.existsSync(dir)) return;
@@ -45,28 +52,36 @@ function loadCommands(dir) {
     const filePath = path.join(dir, file.name);
     if (file.isDirectory()) {
       loadCommands(filePath);
-    } else if (file.name.endsWith('.js')) {
+      continue;
+    }
+    if (!file.name.endsWith('.js')) continue;
+    if (file.name === 'index.js' && dir === __dirname) continue;
+
+    try {
       const cmd = require(filePath);
       if (cmd?.data && cmd?.execute) {
         client.commands.set(cmd.data.name, cmd);
-        if (typeof cmd.data.toJSON === 'function') commands.push(cmd.data.toJSON());
+        if (typeof cmd.data.toJSON === 'function') {
+          commands.push(cmd.data.toJSON());
+        }
       }
+    } catch (err) {
+      console.error(`Failed to load command at ${filePath}:`, err.message);
     }
   }
 }
-loadCommands(commandsPath);
 
-// ---------------------------------------------
-// Helper: upsert a single pinned reaction-roles embed
-// ---------------------------------------------
+for (const root of commandRoots) loadCommands(root);
+
+// ----------------------------
+// Role-claim embed (reactions)
+// ----------------------------
 async function ensureReactionRoleMessage(channel) {
-  // find existing pinned message from this bot with our tag
   const pinned = await channel.messages.fetchPinned().catch(() => null);
   let target = pinned?.find(
     (m) => m.author?.id === client.user.id && m.embeds?.[0]?.footer?.text === ROLE_EMBED_TAG
   );
 
-  // build embed description lines from mapping
   const lines = Object.entries(emojiLabels).map(([emojiKey, label]) => {
     const roleId = emojiToRole[emojiKey];
     const role = channel.guild.roles.cache.get(roleId);
@@ -86,34 +101,41 @@ async function ensureReactionRoleMessage(channel) {
     await target.pin().catch(() => {});
   }
 
-  // Ensure required reactions are present (add missing ones)
   for (const emojiKey of Object.keys(emojiToRole)) {
     const has = target.reactions.cache.find((r) =>
       r.emoji.id ? r.emoji.id === emojiKey : r.emoji.name === emojiKey
     );
     if (!has) {
-      try {
-        await target.react(emojiKey);
-      } catch {
-      }
+      try { await target.react(emojiKey); } catch {}
     }
   }
-
   return target;
 }
 
-const status = require('./utils/getStatus');
-
-// ---------------------------------------------
+// ----------------------------
 // Ready
-// ---------------------------------------------
+// ----------------------------
 client.once('ready', async (c) => {
-  setInterval(() => {
-    const activity = status[Math.floor(Math.random() * status.length)];
-    c.user.setActivity(activity);
-  }, 10000);
+  console.log(`Logged in as ${c.user.tag}!`);
 
-  // Register slash commands (guild). Skip if none found to avoid wiping.
+  try {
+    const port = process.env.AUTH_PORT ? Number(process.env.AUTH_PORT) : 3000;
+    startAuthServer(port);
+  } catch (e) {
+    console.error('Failed to start auth server:', e.message || e);
+  }
+
+  const hasTwitch =
+    process.env.TWITCH_CLIENT_ID &&
+    process.env.TWITCH_CLIENT_SECRET &&
+    process.env.TWITCH_USERNAME;
+  if (hasTwitch) {
+    try { await updateStatus(c); } catch (e) { console.error('updateStatus (initial):', e); }
+    setInterval(() => { updateStatus(c).catch(() => {}); }, 60_000);
+  } else {
+    console.log('Skipping Twitch presence (missing TWITCH_* env vars).');
+  }
+
   const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   try {
     if (commands.length === 0) {
@@ -130,7 +152,6 @@ client.once('ready', async (c) => {
     console.error('Failed to register commands:', error);
   }
 
-  // Upsert the reaction-roles message
   try {
     const channelId = process.env.CHANNEL_ID;
     if (!channelId) {
@@ -148,27 +169,21 @@ client.once('ready', async (c) => {
   }
 });
 
-// ---------------------------------------------
-// Reaction handlers: grant/remove roles
-// ---------------------------------------------
+// ----------------------------
+// Reaction-role handlers
+// ----------------------------
 function resolveRoleIdFromReaction(reaction) {
-  // For Unicode emoji: reaction.emoji.name is the escape string we used as the key.
-  // For custom emoji: reaction.emoji.id is the key.
   return reaction.emoji.id ? emojiToRole[reaction.emoji.id] : emojiToRole[reaction.emoji.name];
 }
 
 async function handleRoleChange(reaction, user, action) {
   try {
     if (user.bot) return;
-
-    // Fetch partials if needed
     if (reaction.partial) await reaction.fetch();
     if (reaction.message.partial) await reaction.message.fetch();
 
     const { message } = reaction;
     if (!message.guild) return;
-
-    // Only act on our specific pinned embed
     const embed = message.embeds?.[0];
     if (!embed || embed.footer?.text !== ROLE_EMBED_TAG) return;
 
@@ -179,7 +194,6 @@ async function handleRoleChange(reaction, user, action) {
     const role = message.guild.roles.cache.get(roleId);
     if (!member || !role) return;
 
-    // Permission and hierarchy checks
     const me = message.guild.members.me;
     if (!me?.permissions.has(PermissionsBitField.Flags.ManageRoles)) return;
     if (me.roles.highest.comparePositionTo(role) <= 0) return;
@@ -197,34 +211,22 @@ async function handleRoleChange(reaction, user, action) {
 client.on('messageReactionAdd', (reaction, user) => handleRoleChange(reaction, user, 'add'));
 client.on('messageReactionRemove', (reaction, user) => handleRoleChange(reaction, user, 'remove'));
 
-// ---------------------------------------------
-// Slash commands (unchanged)
-// ---------------------------------------------
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
-
   const command = client.commands.get(interaction.commandName);
-  if (!command) {
-    return interaction.reply({ content: 'Unknown command!' });
-  }
+  if (!command) return interaction.reply({ content: 'Unknown command!' });
 
   try {
     await command.execute(interaction);
   } catch (error) {
     console.error(error);
     if (interaction.deferred || interaction.replied) {
-      try {
-        await interaction.editReply('There was an error executing this command.');
-      } catch {
-        await interaction.followUp({ content: 'There was an error executing this command.' });
-      }
+      try { await interaction.editReply('There was an error executing this command.'); }
+      catch { await interaction.followUp({ content: 'There was an error executing this command.' }); }
     } else {
       await interaction.reply({ content: 'There was an error executing this command.' });
     }
   }
 });
 
-// ---------------------------------------------
-// Login
-// ---------------------------------------------
 client.login(process.env.TOKEN);
