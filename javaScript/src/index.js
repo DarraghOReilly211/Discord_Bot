@@ -1,9 +1,9 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 
 const { Client, IntentsBitField, Partials } = require('discord.js');
-const { registerEvents } = require('./src/handlers/eventHandler.js');
-const { startReminderWorker } = require('./src/events/reminders.js');
-const { startDigestWorker } = require('./src/config/digest.js');
+const { registerEvents } = require('./handlers/eventHandler.js');
+const { startReminderWorker } = require('./events/reminders');
+const { startDigestWorker } = require('./config/digest');
 
 const client = new Client({
   intents: [
