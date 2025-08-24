@@ -131,7 +131,7 @@ Supports Google Calendar and Microsoft Outlook Calendar:
     TWITCH_USERNAME=your_twitch_login_name
 
 # 5. Run the bot
-    ```python src/main.py ```
+    python src/main.py
 
 
 ### Project Structure
@@ -190,8 +190,10 @@ Supports Google Calendar and Microsoft Outlook Calendar:
 
 ### Notes
 
+  ```
   /set-calendar lets you pick which of your linked calendars (Google or Microsoft) the bot should use by default, so you do not have to choose every time.
 
   Ensure Google and Microsoft app registrations include redirect URIs that match your .env values exactly.
 
   The bot uses SQLite for persistence (bot.db). The schema includes tables for calendars and leveling.
+  ```
