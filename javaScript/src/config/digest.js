@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { upsertDigestSetting } = require('../../db');
+const { upsertDigestSetting } = require('../db');
 
 module.exports = {
   data: new SlashCommandBuilder()
