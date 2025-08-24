@@ -17,6 +17,9 @@ const { updateStatus } = require('../utils/getStatus.js');
 // NOTE: adjust if you move the auth server file
 const { startAuthServer } = require('../commands/calander/authServer.js');
 
+// RSVP button handler (attach later, once we have a client)
+const attachRsvpHandler = require('./rsvpButtons');
+
 /* -----------------------------
    Reaction-roles helpers
 ----------------------------- */
@@ -153,6 +156,12 @@ function loadEvents(client) {
    Main exported function
 ----------------------------- */
 async function registerEvents(client) {
+  // Attach RSVP handler once
+  if (!client.__rsvpAttached) {
+    attachRsvpHandler(client);
+    client.__rsvpAttached = true;
+  }
+
   // 1) Load slash commands and events
   const commandsJSON = loadCommands(client);
   loadEvents(client);
@@ -204,14 +213,14 @@ async function registerEvents(client) {
       const channelId = process.env.CHANNEL_ID;
       if (!channelId) {
         console.warn('CHANNEL_ID not set; skipping reaction roles message.');
-        return;
+      } else {
+        const channel = await c.channels.fetch(channelId);
+        if (!channel) {
+          console.warn('CHANNEL_ID is invalid or not accessible.');
+        } else {
+          await ensureReactionRoleMessage(client, channel);
+        }
       }
-      const channel = await c.channels.fetch(channelId);
-      if (!channel) {
-        console.warn('CHANNEL_ID is invalid or not accessible.');
-        return;
-      }
-      await ensureReactionRoleMessage(client, channel);
     } catch (error) {
       console.log('Error sending reaction roles message:', error);
     }
