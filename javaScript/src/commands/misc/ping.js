@@ -1,3 +1,4 @@
+// src/commands/misc/ping.js
 const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
@@ -7,7 +8,11 @@ module.exports = {
 
   async execute(interaction) {
     const user = interaction.user;
-    await interaction.channel.send('${user.username} sent ping 🏓');
-    await interaction.channel.send('🏓 Pong!');
+
+    // Always respond to the interaction first
+    await interaction.reply({ content: `🏓 Pong! (requested by ${user.username})` });
+
+    // Optionally also post in the channel (non-ephemeral)
+    await interaction.channel.send(`${user.username} sent ping 🏓`);
   },
 };

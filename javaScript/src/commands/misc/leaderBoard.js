@@ -1,31 +1,52 @@
+// javaScript/src/commands/misc/leaderBoard.js
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+
+// ✅ Correct path from /commands/misc/* to /src/db.js
 const { getLeaderboard } = require('../../db');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('leaderboard')
-    .setDescription('Show the server XP leaderboard')
-    .addIntegerOption(o =>
-      o.setName('count').setDescription('How many top users (default 10)').setMinValue(1).setMaxValue(20)
+    .setName('leaderboard') // ensure this name is unique across your project
+    .setDescription('Show the top users by level/xp in this server.')
+    .addIntegerOption(opt =>
+      opt.setName('limit')
+        .setDescription('How many users to show (default 10, max 25)')
+        .setMinValue(1)
+        .setMaxValue(25)
     ),
 
   async execute(interaction) {
-    const count = interaction.options.getInteger('count') || 10;
-    const rows = getLeaderboard(interaction.guild.id, count);
+    await interaction.deferReply({ ephemeral: false });
+    try {
+      const guildId = interaction.guildId;
+      const limit = interaction.options.getInteger('limit') ?? 10;
 
-    if (!rows.length) return interaction.reply('No leaderboard data yet.');
+      const rows = getLeaderboard(guildId, limit); // [{ discord_user_id, level, xp }, ...]
 
-    const desc = rows
-      .map((row, i) => 
-        `#${i + 1} <@${row.discord_user_id}> — Level **${row.level}** (${row.xp} XP)`
-      )
-      .join('\n');
+      if (!rows || rows.length === 0) {
+        await interaction.editReply('No leaderboard data yet. Start chatting to earn XP!');
+        return;
+      }
 
-    const embed = new EmbedBuilder()
-      .setTitle(`${interaction.guild.name} Leaderboard`)
-      .setDescription(desc)
-      .setColor('Gold');
+      const lines = rows.map((r, i) => {
+        const place = i + 1;
+        const userTag = `<@${r.discord_user_id}>`;
+        return `**${place}.** ${userTag} — Level **${r.level}**, XP **${r.xp}**`;
+      });
 
-    await interaction.reply({ embeds: [embed] });
+      const embed = new EmbedBuilder()
+        .setTitle(`🏆 Leaderboard — Top ${rows.length}`)
+        .setDescription(lines.join('\n'))
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+      console.error('leaderboard error:', err);
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply('Sorry, something went wrong showing the leaderboard.');
+      } else {
+        await interaction.reply({ content: 'Sorry, something went wrong.', ephemeral: true });
+      }
+    }
   },
 };
