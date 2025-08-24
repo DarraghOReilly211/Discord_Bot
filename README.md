@@ -42,21 +42,21 @@ Supports Google Calendar and Microsoft Outlook Calendar:
 
 ---
 
-## Setup Instructions
+# Setup Instructions
 
-### JavaScript Version
+## JavaScript Version
 
-# 1. Clone the repository
+### 1. Clone the repository
   ```sh
   git clone <repo-url>
   cd javaScript
   ```
 
 
-# 2. Install dependencies
+### 2. Install dependencies
     npm install
 
-# 3. Create a .env file
+### 3. Create a .env file
     # Discord
     TOKEN=your_discord_bot_token
     CLIENT_ID=your_discord_app_client_id
@@ -85,28 +85,28 @@ Supports Google Calendar and Microsoft Outlook Calendar:
     TWITCH_USERNAME=your_twitch_login_name
 
 
-# 4. Run the bot
+### 4. Run the bot
   ```nodemon src/index.js ```
 
 
-### Python Version (placeholder)
-# 1. Clone the repository
+## Python Version (placeholder)
+### 1. Clone the repository
   ```
   git clone <repo-url>
   cd python
   ```
 
-# 2. Create and activate a virtual environment
+### 2. Create and activate a virtual environment
   ```python -m venv venv```
   # Linux/macOS
   ```source venv/bin/activate```
   # Windows
   ```venv\Scripts\activate```
 
-# 3. Install dependencies
+### 3. Install dependencies
   ```pip install -r requirements.txt ```
 
-# 4. Create a .env file
+### 4. Create a .env file
     #Discord
     DISCORD_TOKEN=your_discord_bot_token
     CLIENT_ID=your_discord_app_client_id
@@ -130,11 +130,11 @@ Supports Google Calendar and Microsoft Outlook Calendar:
     TWITCH_CLIENT_SECRET=...
     TWITCH_USERNAME=your_twitch_login_name
 
-# 5. Run the bot
+### 5. Run the bot
     python src/main.py
 
 
-### Project Structure
+## Project Structure
   ``` 
   javaScript/
     src/
@@ -160,7 +160,7 @@ Supports Google Calendar and Microsoft Outlook Calendar:
   ```
 
 
-### Commands (overview)
+## Commands (overview)
 
   ```
   Moderation: /ban, /unban, /kick, /mute
@@ -188,7 +188,7 @@ Supports Google Calendar and Microsoft Outlook Calendar:
   Welcome messages on member join
   ```
 
-### Notes
+## Notes
 
   ```
   /set-calendar lets you pick which of your linked calendars (Google or Microsoft) the bot should use by default, so you do not have to choose every time.
