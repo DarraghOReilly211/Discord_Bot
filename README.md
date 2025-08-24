@@ -54,11 +54,10 @@ Supports Google Calendar and Microsoft Outlook Calendar:
 
 
 # 2. Install dependencies
-    ```npm install ```
+    npm install
 
 # 3. Create a .env file
-  # Discord
-    ```
+    # Discord
     TOKEN=your_discord_bot_token
     CLIENT_ID=your_discord_app_client_id
     GUILD_ID=your_discord_server_id
@@ -84,11 +83,10 @@ Supports Google Calendar and Microsoft Outlook Calendar:
     TWITCH_CLIENT_ID=...
     TWITCH_CLIENT_SECRET=...
     TWITCH_USERNAME=your_twitch_login_name
-    ```
 
 
 # 4. Run the bot
-  nodemon src/index.js
+  ```nodemon src/index.js ```
 
 
 ### Python Version (placeholder)
@@ -109,8 +107,7 @@ Supports Google Calendar and Microsoft Outlook Calendar:
   ```pip install -r requirements.txt ```
 
 # 4. Create a .env file
-  # Discord
-    ``` 
+    #Discord
     DISCORD_TOKEN=your_discord_bot_token
     CLIENT_ID=your_discord_app_client_id
     GUILD_ID=your_discord_server_id
@@ -132,7 +129,6 @@ Supports Google Calendar and Microsoft Outlook Calendar:
     TWITCH_CLIENT_ID=...
     TWITCH_CLIENT_SECRET=...
     TWITCH_USERNAME=your_twitch_login_name
-    ```
 
 # 5. Run the bot
     ```python src/main.py ```
