@@ -4,7 +4,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.e
 const express = require('express');
 const { google } = require('googleapis');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
-const { db, upsertCalendar } = require('./db');
+const { db, upsertCalendar } = require('../../db');
 
 // --------- Google OAuth2 ---------
 const googleOAuth2 = new google.auth.OAuth2(
@@ -81,12 +81,15 @@ function startAuthServer(port = 3000) {
         refresh_token: tokens.refresh_token || null,
         expires_at,
         visibility: stateObj.visibility || 'private',
+        // is_active default handled in db.upsertCalendar
       });
 
       // If none is active for this provider, make this one active
-      const hasActive = db.prepare(
-        `SELECT 1 FROM calendars WHERE discord_user_id=? AND provider='google' AND is_active=1 LIMIT 1`
-      ).get(stateObj.discord_user_id);
+      const hasActive = db
+        .prepare(
+          `SELECT 1 FROM calendars WHERE discord_user_id=? AND provider='google' AND is_active=1 LIMIT 1`
+        )
+        .get(stateObj.discord_user_id);
 
       if (!hasActive) {
         db.prepare(
@@ -153,7 +156,7 @@ function startAuthServer(port = 3000) {
       // tokens: { access_token, refresh_token, expires_in, token_type, ... }
       const expires_at = Date.now() + (tokens.expires_in ? tokens.expires_in * 1000 : 55 * 60 * 1000);
 
-      // Upsert as “primary”; you can later add a /list-calendars to let users pick a specific one.
+      // Upsert as “primary”; later you can implement /list-calendars to pick a specific one.
       upsertCalendar({
         discord_user_id: stateObj.discord_user_id,
         provider: 'microsoft',
@@ -162,12 +165,15 @@ function startAuthServer(port = 3000) {
         refresh_token: tokens.refresh_token || null,
         expires_at,
         visibility: stateObj.visibility || 'private',
+        // is_active default handled in db.upsertCalendar
       });
 
       // Mark active if none exists yet for Microsoft
-      const hasActive = db.prepare(
-        `SELECT 1 FROM calendars WHERE discord_user_id=? AND provider='microsoft' AND is_active=1 LIMIT 1`
-      ).get(stateObj.discord_user_id);
+      const hasActive = db
+        .prepare(
+          `SELECT 1 FROM calendars WHERE discord_user_id=? AND provider='microsoft' AND is_active=1 LIMIT 1`
+        )
+        .get(stateObj.discord_user_id);
 
       if (!hasActive) {
         db.prepare(
