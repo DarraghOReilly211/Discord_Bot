@@ -5,6 +5,7 @@
     "colornames": "^1.1.1",
     "dayjs": "^1.11.13",
     "express": "^5.1.0",
-    "googleapis": "^156.0.0"
+    "googleapis": "^156.0.0",
+    "node-fetch": "^3.3.2"
   }
 }
