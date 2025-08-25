@@ -1,14 +1,15 @@
-const { ActivityType } = require('discord.js');
+// twitch-status.js
+const { ActivityType, EmbedBuilder } = require('discord.js');
 
 // Use global fetch if available (Node 18+); otherwise fall back to node-fetch
 const ensureFetch = () => {
   if (typeof fetch === 'function') return fetch;
-  // Lazy import to avoid ESM hassle
-  // npm i node-fetch if you need this path
-  // eslint-disable-next-line global-require
   return (...args) => import('node-fetch').then(m => m.default(...args));
 };
 const _fetch = ensureFetch();
+
+const GRAPH_PREVIEW = (login) =>
+  `https://static-cdn.jtvnw.net/previews-ttv/live_user_${encodeURIComponent(login)}-1920x1080.jpg`;
 
 // ---- internal token cache ----
 let twitchToken = null;
@@ -40,12 +41,15 @@ async function getTwitchAppToken() {
 async function getTwitchLiveInfo(login) {
   if (!login) return null;
   const token = await getTwitchAppToken();
-  const res = await _fetch(`https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`, {
-    headers: {
-      'Client-ID': process.env.TWITCH_CLIENT_ID,
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const res = await _fetch(
+    `https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`,
+    {
+      headers: {
+        'Client-ID': process.env.TWITCH_CLIENT_ID,
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Helix error: ${res.status} ${body}`);
@@ -55,7 +59,7 @@ async function getTwitchLiveInfo(login) {
   const s = json.data[0];
   return {
     title: s.title,
-    started_at: s.started_at,
+    started_at: s.started_at, // ISO string
   };
 }
 
@@ -66,6 +70,13 @@ const OFFLINE_STATUSES = [
   { name: 'Working on the bot', type: ActivityType.Playing },
 ];
 
+// ---- live announcement state ----
+let wasLive = false;
+let lastStreamStart = null; // ISO string of started_at we last announced
+let lastAnnounceAt = 0;     // ms since epoch
+const ANNOUNCE_COOLDOWN_MS =
+  Math.max(0, Number(process.env.LIVE_ANNOUNCE_COOLDOWN_MIN || 30)) * 60 * 1000;
+
 async function updateStatus(bot) {
   try {
     const login = process.env.TWITCH_USERNAME;
@@ -74,15 +85,49 @@ async function updateStatus(bot) {
     const live = login ? await getTwitchLiveInfo(login) : null;
 
     if (live && url) {
-      // Live → show Streaming
+      // Presence: Streaming
       bot.user.setPresence({
         activities: [{ name: live.title || 'Streaming', type: ActivityType.Streaming, url }],
         status: 'online',
       });
+
+      // Determine if we should announce (went live or new session)
+      const now = Date.now();
+      const startedChanged = live.started_at && live.started_at !== lastStreamStart;
+      const cooldownOk = now - lastAnnounceAt >= ANNOUNCE_COOLDOWN_MS;
+
+      if ((!wasLive || startedChanged) && cooldownOk) {
+        const channelId = process.env.ANNOUNCE_CHANNEL;
+        if (channelId) {
+          try {
+            const channel = await bot.channels.fetch(channelId);
+            if (channel) {
+              const startedUnix = Math.floor(new Date(live.started_at).getTime() / 1000);
+              const embed = new EmbedBuilder()
+                .setTitle(`${login} is now live on Twitch!`)
+                .setURL(url)
+                .setDescription(live.title || 'Streaming now!')
+                .setColor(0x9146ff)
+                .addFields({ name: 'Started', value: `<t:${startedUnix}:R>` })
+                .setThumbnail(GRAPH_PREVIEW(login))
+                .setFooter({ text: 'Click the title to watch live' });
+
+              await channel.send({ embeds: [embed] });
+              lastAnnounceAt = now;
+              lastStreamStart = live.started_at || null;
+            }
+          } catch (e) {
+            console.error('announce embed error:', e?.message || e);
+          }
+        }
+      }
+
+      wasLive = true;
     } else {
       // Offline → fallback rotation
       const pick = OFFLINE_STATUSES[Math.floor(Math.random() * OFFLINE_STATUSES.length)];
       bot.user.setPresence({ activities: [pick], status: 'online' });
+      wasLive = false;
     }
   } catch (e) {
     console.error('updateStatus error:', e.message || e);
