@@ -59,7 +59,7 @@ async function getTwitchLiveInfo(login) {
   const s = json.data[0];
   return {
     title: s.title,
-    started_at: s.started_at, // ISO string
+    started_at: s.started_at,
   };
 }
 
@@ -87,7 +87,7 @@ async function updateStatus(bot) {
     if (live && url) {
       // Presence: Streaming
       bot.user.setPresence({
-        activities: [{ name: live.title || 'Streaming', type: ActivityType.Streaming, url }],
+        activities: [{ name: `${login} playing ${live.title}` || 'Streaming', type: ActivityType.Streaming, url }],
         status: 'online',
       });
 
@@ -112,9 +112,11 @@ async function updateStatus(bot) {
                 .setThumbnail(GRAPH_PREVIEW(login))
                 .setFooter({ text: 'Click the title to watch live' });
 
+              channel.send("@everyone " + `${login} is now live on Twitch!`);
               await channel.send({ embeds: [embed] });
               lastAnnounceAt = now;
               lastStreamStart = live.started_at || null;
+              
             }
           } catch (e) {
             console.error('announce embed error:', e?.message || e);

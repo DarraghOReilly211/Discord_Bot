@@ -186,7 +186,7 @@ async function registerEvents(client) {
 
     if (hasTwitch) {
       try { await updateStatus(c); } catch (e) { console.error('updateStatus (initial):', e); }
-      setInterval(() => { updateStatus(c).catch(() => {}); }, 60_000);
+      setInterval(() => { updateStatus(c).catch(() => {}); }, 10_000);
     } else {
       console.log('Skipping Twitch presence (missing TWITCH_* env vars).');
     }
